@@ -204,7 +204,8 @@
             questionCount: 0,
             currentQ: null,
             isAwaitingNext: false,
-            lastType: 0
+            lastType: 0,
+            autoAdvanceTimer: null
         };
 
         // Replace this with your deployed Google Apps Script Web App URL
@@ -733,6 +734,7 @@
         }
 
         function generateQuestion() {
+            if (quizState.autoAdvanceTimer) clearTimeout(quizState.autoAdvanceTimer);
             quizState.isAwaitingNext = false;
             quizState.questionCount++;
             
@@ -845,6 +847,13 @@
                 
                 // Sync updated score and register EXACTLY ONE correct attempt to the cloud
                 updateScoreInCloud(quizState.name, quizState.score, true);
+
+                // Automatically advance after 3 seconds
+                quizState.autoAdvanceTimer = setTimeout(() => {
+                    if (quizState.isAwaitingNext) {
+                        generateQuestion();
+                    }
+                }, 3000);
             } else {
                 feedbackEl.innerHTML = `<span class="text-rose-600 bg-rose-100 px-4 py-2 rounded-lg w-full text-center">Incorrect! Correct answer was ${correctAnswer}°.</span>`;
                 feedbackEl.style.opacity = '1';
