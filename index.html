@@ -211,14 +211,14 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyuH1h-SEELpGAEeR8SOYDq_5fbHxtTk6bD2SHfZnp92pOHBRLQbrabm4fHPxTcllE/exec";
 
         // Helper function to send data to Google Sheets
-        function updateScoreInCloud(name, score) {
+        function updateScoreInCloud(name, score, justAttempted = false) {
             if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") return;
 
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 // Using text/plain prevents the browser from sending a CORS preflight OPTIONS request
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ name: name, score: score })
+                body: JSON.stringify({ name: name, score: score, justAttempted: justAttempted })
             })
             .then(res => res.json())
             .then(data => console.log("Cloud sync:", data))
@@ -726,8 +726,8 @@
             uiQuizSetup.classList.add('hidden');
             uiQuizActive.classList.remove('hidden');
             
-            // Sync initial state (0 points)
-            updateScoreInCloud(quizState.name, quizState.score);
+            // Sync initial state (0 points, no new attempt yet)
+            updateScoreInCloud(quizState.name, quizState.score, false);
 
             generateQuestion();
         }
@@ -835,8 +835,8 @@
                 quizState.score++;
                 document.getElementById('display-score').innerText = quizState.score;
                 
-                // Sync updated score to cloud
-                updateScoreInCloud(quizState.name, quizState.score);
+                // Sync updated score and register the attempt to cloud
+                updateScoreInCloud(quizState.name, quizState.score, true);
 
                 feedbackEl.innerHTML = `<span class="text-emerald-600 bg-emerald-100 px-4 py-2 rounded-lg w-full text-center">Correct! Well done.</span>`;
                 
@@ -844,25 +844,9 @@
                 quizState.isAwaitingNext = true;
                 
                 document.getElementById('quiz-answer-input').disabled = true;
-                btn.disabled = true;
-                btn.innerText = 'Next in 3s...';
 
-                // Auto-advance only on correct answers
-                setTimeout(() => {
-                    if(quizState.isAwaitingNext) generateQuestion();
-                }, 3000);
-            } else {
-                // Show the solution and wait for user to click next
-                let explanation = "";
-                if (quizState.currentQ.type === 1) explanation = ` (90° - ${quizState.currentQ.theta}°)`;
-                else if (quizState.currentQ.type === 3) explanation = ` (Alternate Segment)`;
-                
-                feedbackEl.innerHTML = `<span class="text-red-600 bg-red-100 px-4 py-2 rounded-lg w-full text-center">Incorrect. Answer is ${quizState.currentQ.answer}°${explanation}</span>`;
-                feedbackEl.style.opacity = '1';
-                
-                quizState.isAwaitingNext = true;
-                
-                document.getElementById('quiz-answer-input').disabled = true;
+                // Sync attempt to cloud even if incorrect (score stays the same)
+                updateScoreInCloud(quizState.name, quizState.score, true);
                 
                 // Allow manual click for next question
                 btn.disabled = false;
