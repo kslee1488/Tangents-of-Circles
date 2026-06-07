@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circle Tangent Theorems</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+        .theorem-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .theorem-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+        }
+        .mode-btn.active {
+            background-color: #slate-800;
+            color: white;
+            border-color: #slate-800;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col md:flex-row text-slate-800">
+
+    <!-- Sidebar / Controls -->
+    <div class="w-full md:w-80 lg:w-[400px] bg-white border-r border-slate-200 shadow-lg z-10 flex flex-col h-[45vh] md:h-full flex-shrink-0 overflow-y-auto">
+        <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900 tracking-tight">Circle Theorems</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Interactive Geometry</p>
+            </div>
+            
+            <!-- Mode Toggle -->
+            <div class="flex bg-slate-200 p-1 rounded-lg">
+                <button id="btn-mode-explore" onclick="setMode('explore')" class="px-3 py-1.5 text-xs font-semibold rounded bg-white shadow-sm text-slate-800 transition-colors">Explore</button>
+                <button id="btn-mode-quiz" onclick="setMode('quiz')" class="px-3 py-1.5 text-xs font-semibold rounded text-slate-500 hover:text-slate-800 transition-colors">Quiz</button>
+            </div>
+        </div>
+
+        <!-- EXPLORE MODE UI -->
+        <div id="ui-explore" class="p-6 flex-grow flex flex-col gap-4">
+            <div class="flex flex-col gap-2">
+                <button onclick="setTheorem(1)" id="btn-thm1" class="theorem-btn active text-left px-4 py-3 rounded-xl border border-slate-200 font-medium hover:bg-slate-50">
+                    1. Radius & Tangent
+                </button>
+                <button onclick="setTheorem(2)" id="btn-thm2" class="theorem-btn text-left px-4 py-3 rounded-xl border border-slate-200 font-medium hover:bg-slate-50">
+                    2. Tangent Properties
+                </button>
+                <button onclick="setTheorem(3)" id="btn-thm3" class="theorem-btn text-left px-4 py-3 rounded-xl border border-slate-200 font-medium hover:bg-slate-50">
+                    3. Alternate Segment
+                </button>
+            </div>
+
+            <div id="description-box" class="bg-blue-50 text-blue-900 p-4 rounded-xl text-sm leading-relaxed border border-blue-100 mt-2">
+                <!-- Content dynamically injected here -->
+            </div>
+
+            <div class="mt-auto pt-4 border-t border-slate-100">
+                <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Live Measurements</h3>
+                <div id="live-stats" class="bg-slate-50 rounded-lg p-3 text-sm font-mono text-slate-700 space-y-2 border border-slate-200">
+                    <!-- Stats dynamically injected here -->
+                </div>
+            </div>
+            <div class="text-center text-xs text-slate-400 border-t border-slate-100 pt-3">
+                Drag the colored points on the circle to interact.
+            </div>
+        </div>
+
+        <!-- QUIZ SETUP UI -->
+        <div id="ui-quiz-setup" class="hidden p-6 flex-grow flex flex-col items-center justify-center gap-6 text-center">
+            <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 w-full">
+                <h2 class="text-2xl font-bold text-indigo-900 mb-2">Quiz Challenge</h2>
+                <p class="text-sm text-indigo-700 mb-6">Test your knowledge! Questions are randomly generated from the three theorems. Points are fixed in this mode.</p>
+                
+                <div class="flex flex-col gap-2 text-left">
+                    <label class="text-xs font-semibold text-indigo-900 uppercase tracking-wide">Enter Your Name</label>
+                    <input type="text" id="quiz-name-input" placeholder="e.g. Euclid" class="px-4 py-3 rounded-lg border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full" onkeydown="if(event.key==='Enter') startQuiz()">
+                </div>
+                
+                <button onclick="startQuiz()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-200 transition-colors">
+                    Start Quiz
+                </button>
+            </div>
+        </div>
+
+        <!-- ACTIVE QUIZ UI -->
+        <div id="ui-quiz-active" class="hidden p-6 flex-grow flex flex-col gap-4">
+            <!-- Scoreboard -->
+            <div class="flex justify-between items-center bg-indigo-600 text-white p-4 rounded-xl shadow-md">
+                <div class="flex flex-col">
+                    <span class="text-xs text-indigo-200 uppercase tracking-wider">Player</span>
+                    <span id="display-name" class="font-bold text-lg">Name</span>
+                </div>
+                <div class="flex flex-col text-center">
+                    <span class="text-xs text-indigo-200 uppercase tracking-wider">Question</span>
+                    <span id="display-q-count" class="font-bold text-lg">1</span>
+                </div>
+                <div class="flex flex-col text-right">
+                    <span class="text-xs text-indigo-200 uppercase tracking-wider">Score</span>
+                    <span id="display-score" class="font-bold text-2xl leading-none">0</span>
+                </div>
+            </div>
+
+            <!-- Question Area -->
+            <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl mt-2">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded uppercase">Question</span>
+                    <span id="quiz-theorem-hint" class="text-xs text-slate-500">Theorem Hint</span>
+                </div>
+                <p id="quiz-question-text" class="text-slate-800 text-sm font-medium leading-relaxed">
+                    <!-- Question injected here -->
+                </p>
+            </div>
+
+            <!-- Input Area -->
+            <div class="mt-auto">
+                <div class="flex gap-2">
+                    <div class="relative flex-grow">
+                        <input type="number" id="quiz-answer-input" placeholder="Angle in degrees" class="w-full px-4 py-3 pr-8 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-lg" onkeydown="if(event.key==='Enter') checkAnswer()">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">°</span>
+                    </div>
+                    <button onclick="checkAnswer()" id="btn-submit-answer" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-md transition-colors">
+                        Submit
+                    </button>
+                </div>
+                
+                <!-- Feedback message -->
+                <div id="quiz-feedback" class="h-10 mt-3 flex items-center justify-center rounded-lg font-bold text-sm opacity-0 transition-opacity duration-300">
+                    <!-- Feedback injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container" class="flex-grow relative h-[55vh] md:h-full w-full bg-slate-100/50 flex items-center justify-center overflow-hidden">
+        <canvas id="mathCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+        <div class="absolute inset-0 pointer-events-none shadow-[inset_0_0_40px_rgba(0,0,0,0.03)]"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mathCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const container = document.getElementById('canvas-container');
+        
+        // UI Elements
+        const uiExplore = document.getElementById('ui-explore');
+        const uiQuizSetup = document.getElementById('ui-quiz-setup');
+        const uiQuizActive = document.getElementById('ui-quiz-active');
+        const btnModeExplore = document.getElementById('btn-mode-explore');
+        const btnModeQuiz = document.getElementById('btn-mode-quiz');
+        const descriptionBox = document.getElementById('description-box');
+        const liveStats = document.getElementById('live-stats');
+
+        // State variables
+        let width, height, dpr;
+        let center = { x: 0, y: 0 };
+        let radius = 150;
+        let draggingPoint = null;
+        
+        // App Modes
+        let appMode = 'explore'; // 'explore', 'quiz_setup', 'quiz_active'
+        let currentTheorem = 1;
+
+        // Visual Theme
+        const colors = {
+            bg: '#f8fafc',
+            circle: '#94a3b8',
+            line: '#475569',
+            primary: '#3b82f6',   // Blue
+            accent: '#f43f5e',    // Rose
+            secondary: '#10b981', // Emerald
+            highlight: 'rgba(59, 130, 246, 0.15)',
+            purple: '#a855f7',
+            orange: '#f97316',
+            quiz: '#4f46e5'       // Indigo for quiz elements
+        };
+
+        // Mathematical State (Explore Mode)
+        let points = {
+            thm1: { pAngle: -Math.PI / 4 }, 
+            thm2: { aAngle: -Math.PI * 0.8, bAngle: -Math.PI * 0.2 },
+            thm3: { pAngle: -Math.PI / 2, aAngle: 0, bAngle: Math.PI * 0.75 } 
+        };
+
+        // Quiz State
+        let quizState = {
+            name: '',
+            score: 0,
+            questionCount: 0,
+            currentQ: null,
+            isAwaitingNext: false,
+            lastType: 0
+        };
+
+        // Replace this with your deployed Google Apps Script Web App URL
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyuH1h-SEELpGAEeR8SOYDq_5fbHxtTk6bD2SHfZnp92pOHBRLQbrabm4fHPxTcllE/exec";
+
+        // Helper function to send data to Google Sheets
+        function updateScoreInCloud(name, score) {
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") return;
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                // Using text/plain prevents the browser from sending a CORS preflight OPTIONS request
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ name: name, score: score })
+            })
+            .then(res => res.json())
+            .then(data => console.log("Cloud sync:", data))
+            .catch(err => console.error("Error saving to cloud:", err));
+        }
+
+        const theoremData = {
+            1: { desc: "<b>Theorem:</b> A tangent to a circle is perpendicular to the radius drawn to the point of contact.<br><br>Drag point <b>P</b> around the circle to see that the angle between the red tangent line and blue radius is always 90°." },
+            2: { desc: "<b>Tangent Properties:</b> Tangents drawn to a circle from an external point are equal in length, and subtend equal angles at the center and at the external point.<br><br>Drag points <b>A</b> and <b>B</b> around the circle. Notice how the line from center <b>O</b> to external point <b>P</b> creates equal pairs of angles." },
+            3: { desc: "<b>Theorem (Alternate Segment):</b> The angle between a tangent and a chord through the point of contact is equal to the angle in the alternate segment.<br><br>Drag <b>P</b> (tangent point), <b>A</b> (chord end), or <b>B</b> (alternate angle) to observe the relationship." }
+        };
+
+        function dist(p1, p2) {
+            return Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+        }
+
+        function normalizeAngle(angle) {
+            let a = angle % (2 * Math.PI);
+            if (a < 0) a += 2 * Math.PI;
+            return a;
+        }
+
+        function getPointOnCircle(angle) {
+            return {
+                x: center.x + radius * Math.cos(angle),
+                y: center.y + radius * Math.sin(angle)
+            };
+        }
+
+        function drawCircle() {
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = colors.circle;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = colors.line;
+            ctx.fill();
+            
+            ctx.fillStyle = colors.line;
+            ctx.font = '14px Inter';
+            ctx.fillText('O', center.x - 5, center.y + 20);
+        }
+
+        function drawPoint(p, color, label, offset = {x: 10, y: 10}, isInteractive = true) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, isInteractive ? 8 : 6, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            if (isInteractive) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 16, 0, 2 * Math.PI);
+                ctx.fillStyle = color + '33';
+                ctx.fill();
+            }
+
+            if (label) {
+                ctx.fillStyle = colors.line;
+                ctx.font = 'bold 16px Inter';
+                ctx.fillText(label, p.x + offset.x, p.y + offset.y);
+            }
+        }
+
+        function drawLine(p1, p2, color, dash = []) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash(dash);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function drawRightAngle(p_vertex, p1, p2, size = 15) {
+            let a1 = Math.atan2(p1.y - p_vertex.y, p1.x - p_vertex.x);
+            let a2 = Math.atan2(p2.y - p_vertex.y, p2.x - p_vertex.x);
+            
+            let v1 = { x: Math.cos(a1) * size, y: Math.sin(a1) * size };
+            let v2 = { x: Math.cos(a2) * size, y: Math.sin(a2) * size };
+            
+            ctx.beginPath();
+            ctx.moveTo(p_vertex.x + v1.x, p_vertex.y + v1.y);
+            ctx.lineTo(p_vertex.x + v1.x + v2.x, p_vertex.y + v1.y + v2.y);
+            ctx.lineTo(p_vertex.x + v2.x, p_vertex.y + v2.y);
+            ctx.strokeStyle = colors.line;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        function drawAngleArc(p_vertex, a_start, a_end, size, color, fill = false, textLabel = null) {
+            let diff = a_end - a_start;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            
+            let counterClockwise = diff < 0;
+
+            ctx.beginPath();
+            ctx.moveTo(p_vertex.x, p_vertex.y);
+            ctx.arc(p_vertex.x, p_vertex.y, size, a_start, a_end, counterClockwise);
+            ctx.closePath();
+            
+            if (fill) {
+                ctx.fillStyle = color + '22';
+                ctx.fill();
+            }
+            
+            ctx.beginPath();
+            ctx.arc(p_vertex.x, p_vertex.y, size, a_start, a_end, counterClockwise);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw text label in the middle of the arc
+            if (textLabel) {
+                let midAngle = a_start + diff / 2;
+                let textDist = size + 15;
+                let tx = p_vertex.x + Math.cos(midAngle) * textDist;
+                let ty = p_vertex.y + Math.sin(midAngle) * textDist;
+                
+                ctx.fillStyle = color;
+                // Make the question mark larger
+                ctx.font = textLabel === '?' ? 'bold 22px Inter' : 'bold 14px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Add a small white background to text for readability
+                let textMetrics = ctx.measureText(textLabel);
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                let pad = 2;
+                ctx.fillRect(tx - textMetrics.width/2 - pad, ty - 10 - pad, textMetrics.width + pad*2, 20 + pad*2);
+                
+                ctx.fillStyle = color;
+                ctx.fillText(textLabel, tx, ty);
+            }
+        }
+
+        function renderTheorem1() {
+            drawCircle();
+            let pAngle = points.thm1.pAngle;
+            let P = getPointOnCircle(pAngle);
+            
+            drawLine(center, P, colors.primary);
+            
+            let tangentAngle = pAngle + Math.PI / 2;
+            let tanLen = 800;
+            let t1 = { x: P.x + Math.cos(tangentAngle) * tanLen, y: P.y + Math.sin(tangentAngle) * tanLen };
+            let t2 = { x: P.x - Math.cos(tangentAngle) * tanLen, y: P.y - Math.sin(tangentAngle) * tanLen };
+            drawLine(t1, t2, colors.accent);
+
+            drawRightAngle(P, center, t1, 16);
+            drawPoint(P, colors.primary, 'P', {x: 15, y: -15});
+
+            if(appMode === 'explore') {
+                liveStats.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span>Angle between Radius & Tangent:</span>
+                        <span class="text-primary font-bold text-lg">90°</span>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTheorem2() {
+            drawCircle();
+            let aAngle = points.thm2.aAngle;
+            let bAngle = points.thm2.bAngle;
+            let A = getPointOnCircle(aAngle);
+            let B = getPointOnCircle(bAngle);
+
+            let dirA = aAngle + Math.PI/2;
+            let dirB = bAngle + Math.PI/2;
+            let dx = B.x - A.x;
+            let dy = B.y - A.y;
+            let det = Math.cos(dirB) * Math.sin(dirA) - Math.sin(dirB) * Math.cos(dirA);
+            
+            let P;
+            let isParallel = false;
+            
+            if (Math.abs(det) < 0.01) {
+                isParallel = true;
+                P = {x: -9999, y: -9999}; 
+            } else {
+                let t2 = (dy * Math.cos(dirA) - dx * Math.sin(dirA)) / det;
+                P = { x: B.x + Math.cos(dirB) * t2, y: B.y + Math.sin(dirB) * t2 };
+            }
+
+            drawLine(center, A, colors.primary);
+            drawLine(center, B, colors.primary);
+            
+            let angleAPO_deg = 0, angleBPO_deg = 0, angleAOP_deg = 0, angleBOP_deg = 0;
+
+            if(!isParallel && Math.abs(P.x) < width * 3 && Math.abs(P.y) < height * 3) {
+                drawLine(center, P, colors.line, [4, 4]);
+                drawLine(P, A, colors.accent);
+                drawLine(P, B, colors.secondary);
+
+                drawRightAngle(A, center, P, 14);
+                drawRightAngle(B, center, P, 14);
+
+                let vPA = { x: A.x - P.x, y: A.y - P.y };
+                let vPO = { x: center.x - P.x, y: center.y - P.y };
+                let vOA = { x: A.x - center.x, y: A.y - center.y };
+                let vOP = { x: P.x - center.x, y: P.y - center.y };
+                
+                // Calculations
+                let dotAPO = vPA.x * vPO.x + vPA.y * vPO.y;
+                let lenAPO = dist(P, A) * dist(P, center);
+                angleAPO_deg = Math.acos(Math.max(-1, Math.min(1, dotAPO / lenAPO))) * (180 / Math.PI);
+                angleBPO_deg = angleAPO_deg; // Mathematically equal
+
+                let dotAOP = vOA.x * vOP.x + vOA.y * vOP.y;
+                let lenAOP = radius * dist(P, center);
+                angleAOP_deg = Math.acos(Math.max(-1, Math.min(1, dotAOP / lenAOP))) * (180 / Math.PI);
+                angleBOP_deg = angleAOP_deg; // Mathematically equal
+
+                let pAngleDir = Math.atan2(center.y - P.y, center.x - P.x);
+                let paAngleDir = Math.atan2(A.y - P.y, A.x - P.x);
+                let pbAngleDir = Math.atan2(B.y - P.y, B.x - P.x);
+
+                let oAngleDir = Math.atan2(P.y - center.y, P.x - center.x);
+                let oaAngleDir = Math.atan2(A.y - center.y, A.x - center.x);
+                let obAngleDir = Math.atan2(B.y - center.y, B.x - center.x);
+
+                drawAngleArc(P, pAngleDir, paAngleDir, 35, colors.purple, true);
+                drawAngleArc(P, pbAngleDir, pAngleDir, 35, colors.purple, true);
+                drawAngleArc(center, oAngleDir, oaAngleDir, 30, colors.orange, true);
+                drawAngleArc(center, obAngleDir, oAngleDir, 30, colors.orange, true);
+                
+                drawPoint(P, colors.line, 'P', {x: -25, y: -10}, appMode === 'explore');
+            }
+
+            drawPoint(A, colors.accent, 'A', {x: Math.cos(aAngle)*20, y: Math.sin(aAngle)*20}, appMode === 'explore');
+            drawPoint(B, colors.secondary, 'B', {x: Math.cos(bAngle)*20, y: Math.sin(bAngle)*20}, appMode === 'explore');
+
+            if(appMode === 'explore') {
+                if(!isParallel && Math.abs(P.x) < width * 3) {
+                    liveStats.innerHTML = `
+                        <div class="flex flex-col gap-1 text-xs">
+                            <div class="flex justify-between items-center text-purple-600 font-semibold pt-1">
+                                <span>Angle APO (∠APO):</span><span>${angleAPO_deg.toFixed(1)}°</span>
+                            </div>
+                            <div class="flex justify-between items-center text-purple-600 font-semibold pb-1 border-b border-slate-100">
+                                <span>Angle BPO (∠BPO):</span><span>${angleBPO_deg.toFixed(1)}°</span>
+                            </div>
+                            <div class="flex justify-between items-center text-orange-600 font-semibold pt-1">
+                                <span>Angle AOP (∠AOP):</span><span>${angleAOP_deg.toFixed(1)}°</span>
+                            </div>
+                            <div class="flex justify-between items-center text-orange-600 font-semibold">
+                                <span>Angle BOP (∠BOP):</span><span>${angleBOP_deg.toFixed(1)}°</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    liveStats.innerHTML = `<div class="text-center text-accent font-bold py-2">Tangents are nearly parallel!</div>`;
+                }
+            }
+        }
+
+        function renderTheorem3() {
+            drawCircle();
+            let P = getPointOnCircle(points.thm3.pAngle);
+            let A = getPointOnCircle(points.thm3.aAngle);
+            let B = getPointOnCircle(points.thm3.bAngle);
+
+            drawLine(P, A, colors.line);
+            drawLine(A, B, colors.line);
+            drawLine(B, P, colors.line);
+
+            let tangentAngle = points.thm3.pAngle + Math.PI / 2;
+            let t1 = { x: P.x + Math.cos(tangentAngle) * 300, y: P.y + Math.sin(tangentAngle) * 300 };
+            let t2 = { x: P.x - Math.cos(tangentAngle) * 300, y: P.y - Math.sin(tangentAngle) * 300 };
+            drawLine(t1, t2, colors.accent);
+
+            let angleChord = Math.atan2(A.y - P.y, A.x - P.x);
+            let angleTan1 = Math.atan2(t1.y - P.y, t1.x - P.x);
+            let angleTan2 = Math.atan2(t2.y - P.y, t2.x - P.x);
+
+            let angleB1 = Math.atan2(P.y - B.y, P.x - B.x);
+            let angleB2 = Math.atan2(A.y - B.y, A.x - B.x);
+            
+            let diffB = Math.abs(normalizeAngle(angleB2) - normalizeAngle(angleB1));
+            if (diffB > Math.PI) diffB = 2 * Math.PI - diffB;
+
+            let radiusDraw = 30;
+            let startB = Math.min(normalizeAngle(angleB1), normalizeAngle(angleB2));
+            let endB = Math.max(normalizeAngle(angleB1), normalizeAngle(angleB2));
+            if (endB - startB > Math.PI) {
+                startB = endB;
+                endB = Math.min(normalizeAngle(angleB1), normalizeAngle(angleB2)) + 2*Math.PI;
+            }
+            drawAngleArc(B, startB, endB, radiusDraw, colors.primary, true);
+
+            let diffT1 = Math.abs(normalizeAngle(angleChord) - normalizeAngle(angleTan1));
+            if (diffT1 > Math.PI) diffT1 = 2 * Math.PI - diffT1;
+            
+            let useTanAngle = (Math.abs(diffT1 - diffB) < 0.05) ? angleTan1 : angleTan2;
+            
+            let startP = Math.min(normalizeAngle(angleChord), normalizeAngle(useTanAngle));
+            let endP = Math.max(normalizeAngle(angleChord), normalizeAngle(useTanAngle));
+            if (endP - startP > Math.PI) {
+                 startP = endP;
+                 endP = Math.min(normalizeAngle(angleChord), normalizeAngle(useTanAngle)) + 2*Math.PI;
+            }
+            drawAngleArc(P, startP, endP, radiusDraw, colors.primary, true);
+
+            drawPoint(P, colors.accent, 'P', {x: 15, y: 15}, appMode === 'explore');
+            drawPoint(A, colors.secondary, 'A', {x: 15, y: -15}, appMode === 'explore');
+            drawPoint(B, colors.primary, 'B', {x: -25, y: -15}, appMode === 'explore');
+
+            if(appMode === 'explore') {
+                let displayAngle = (diffB * 180 / Math.PI).toFixed(1);
+                liveStats.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span>Angle (Tangent & Chord):</span>
+                        <span class="text-primary font-bold">${displayAngle}°</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Angle in Alt Segment (∠PBA):</span>
+                        <span class="text-primary font-bold">${displayAngle}°</span>
+                    </div>
+                `;
+            }
+        }
+
+        function renderQuizTheorem1() {
+            drawCircle();
+            let q = quizState.currentQ;
+            
+            // P at bottom
+            let P = { x: center.x, y: center.y + radius };
+            drawLine(center, P, colors.primary); // Radius
+
+            // T is to the right on the tangent
+            let tanLen = radius * Math.tan(q.theta * Math.PI / 180);
+            let T = { x: P.x + tanLen, y: P.y };
+            
+            // Draw Tangent extending both sides slightly
+            drawLine({x: P.x - 50, y: P.y}, {x: T.x + 50, y: T.y}, colors.accent);
+            
+            // Draw hypotenuse OT
+            drawLine(center, T, colors.line);
+
+            drawRightAngle(P, center, T, 16);
+
+            // Labels and Arcs
+            drawPoint(P, colors.primary, 'P', {x: -20, y: 15}, false);
+            drawPoint(T, colors.line, 'T', {x: 10, y: 15}, false);
+
+            let anglePOT_start = Math.atan2(P.y - center.y, P.x - center.x);
+            let anglePOT_end = Math.atan2(T.y - center.y, T.x - center.x);
+            drawAngleArc(center, anglePOT_end, anglePOT_start, 40, colors.orange, true, q.theta + '°');
+
+            let anglePTO_start = Math.atan2(P.y - T.y, P.x - T.x);
+            let anglePTO_end = Math.atan2(center.y - T.y, center.x - T.x);
+            drawAngleArc(T, anglePTO_start, anglePTO_end, 40, colors.purple, true, '?');
+        }
+
+        function renderQuizTheorem2() {
+            drawCircle();
+            let q = quizState.currentQ;
+            
+            // P on the left axis
+            let halfAngleRad = (q.thetaP) * (Math.PI / 180);
+            let distOP = radius / Math.sin(halfAngleRad);
+            let P = { x: center.x - distOP, y: center.y };
+
+            // Find tangent points A and B
+            let contactAngle = Math.PI/2 - halfAngleRad; 
+            let A = { x: center.x - radius * Math.cos(contactAngle), y: center.y - radius * Math.sin(contactAngle) };
+            let B = { x: center.x - radius * Math.cos(contactAngle), y: center.y + radius * Math.sin(contactAngle) };
+
+            // Draw Lines
+            drawLine(center, A, colors.primary);
+            drawLine(center, B, colors.primary);
+            drawLine(P, A, colors.accent);
+            drawLine(P, B, colors.accent);
+            drawLine(center, P, colors.line, [4,4]);
+
+            drawRightAngle(A, center, P, 14);
+            drawRightAngle(B, center, P, 14);
+
+            drawPoint(A, colors.primary, 'A', {x: 10, y: -15}, false);
+            drawPoint(B, colors.primary, 'B', {x: 10, y: 25}, false);
+            drawPoint(P, colors.line, 'P', {x: -25, y: 5}, false);
+
+            // Calculate directions for arcs
+            let dirPA = Math.atan2(A.y - P.y, A.x - P.x);
+            let dirPB = Math.atan2(B.y - P.y, B.x - P.x);
+            let dirPO = Math.atan2(center.y - P.y, center.x - P.x);
+            
+            let dirOA = Math.atan2(A.y - center.y, A.x - center.x);
+            let dirOB = Math.atan2(B.y - center.y, B.x - center.x);
+            let dirOP = Math.atan2(P.y - center.y, P.x - center.x);
+
+            // Helper to dynamically draw the correct given/target arcs
+            const drawSpecificArc = (angleName, labelText, color) => {
+                if (angleName === 'APO') drawAngleArc(P, dirPO, dirPA, 45, color, true, labelText);
+                else if (angleName === 'BPO') drawAngleArc(P, dirPO, dirPB, 45, color, true, labelText);
+                else if (angleName === 'AOP') drawAngleArc(center, dirOP, dirOA, 35, color, true, labelText);
+                else if (angleName === 'BOP') drawAngleArc(center, dirOP, dirOB, 35, color, true, labelText);
+            };
+
+            // Draw Given and Target arcs
+            drawSpecificArc(q.givenName, q.givenValue + '°', colors.purple);
+            drawSpecificArc(q.targetName, '?', colors.orange);
+        }
+
+        function renderQuizTheorem3() {
+            drawCircle();
+            let q = quizState.currentQ;
+            
+            let P = { x: center.x, y: center.y + radius };
+            let tangentAngle = 0; // Horizontal tangent
+            
+            // Chord PA goes up-right
+            let aAngleFromTangent = q.theta * Math.PI / 180;
+            // Angle of A from center: tangent is at 90 deg (PI/2) on bottom. 
+            // Triangle formed by center, P, A is isosceles. Angle at circumf = theta -> angle at center = 2*theta
+            let centerAngleA = Math.PI/2 - (2 * aAngleFromTangent);
+            let A = getPointOnCircle(centerAngleA);
+
+            // B is somewhere to form the alternate segment (e.g., top-left)
+            let B = getPointOnCircle(Math.PI + Math.PI/4);
+
+            drawLine(P, A, colors.line);
+            drawLine(A, B, colors.line);
+            drawLine(B, P, colors.line);
+
+            // Tangent
+            drawLine({x: P.x - 300, y: P.y}, {x: P.x + 300, y: P.y}, colors.accent);
+
+            drawPoint(P, colors.accent, 'P', {x: -15, y: 25}, false);
+            drawPoint(A, colors.secondary, 'A', {x: 15, y: -10}, false);
+            drawPoint(B, colors.primary, 'B', {x: -25, y: -10}, false);
+
+            // Arcs
+            let dirPA = Math.atan2(A.y - P.y, A.x - P.x);
+            let dirPT = 0; // Tangent to the right
+            drawAngleArc(P, dirPT, dirPA, 40, colors.orange, true, q.theta + '°');
+
+            let dirBP = Math.atan2(P.y - B.y, P.x - B.x);
+            let dirBA = Math.atan2(A.y - B.y, A.x - B.x);
+            // Ensure correct arc drawing order
+            let startB = Math.min(normalizeAngle(dirBP), normalizeAngle(dirBA));
+            let endB = Math.max(normalizeAngle(dirBP), normalizeAngle(dirBA));
+            drawAngleArc(B, startB, endB, 35, colors.purple, true, '?');
+        }
+
+        function setMode(mode) {
+            appMode = mode;
+            
+            // Update Buttons
+            btnModeExplore.className = mode === 'explore' 
+                ? "px-3 py-1.5 text-xs font-semibold rounded bg-white shadow-sm text-slate-800 transition-colors" 
+                : "px-3 py-1.5 text-xs font-semibold rounded text-slate-500 hover:text-slate-800 transition-colors";
+            
+            btnModeQuiz.className = mode !== 'explore'
+                ? "px-3 py-1.5 text-xs font-semibold rounded bg-white shadow-sm text-slate-800 transition-colors"
+                : "px-3 py-1.5 text-xs font-semibold rounded text-slate-500 hover:text-slate-800 transition-colors";
+
+            // Update UI Containers
+            uiExplore.classList.add('hidden');
+            uiQuizSetup.classList.add('hidden');
+            uiQuizActive.classList.add('hidden');
+
+            if (mode === 'explore') {
+                uiExplore.classList.remove('hidden');
+                draw(); // Redraw interactive state
+            } else if (mode === 'quiz') {
+                if(quizState.name === '') {
+                    uiQuizSetup.classList.remove('hidden');
+                    document.getElementById('quiz-name-input').focus();
+                } else {
+                    uiQuizActive.classList.remove('hidden');
+                }
+                draw(); // Draw static/quiz state
+            }
+        }
+
+        function startQuiz() {
+            const nameInput = document.getElementById('quiz-name-input').value.trim();
+            if (!nameInput) {
+                // Flash the input if empty instead of alerting
+                const inputEl = document.getElementById('quiz-name-input');
+                inputEl.classList.add('ring-2', 'ring-red-400');
+                setTimeout(() => inputEl.classList.remove('ring-2', 'ring-red-400'), 500);
+                return;
+            }
+
+            quizState.name = nameInput;
+            quizState.score = 0;
+            quizState.questionCount = 0;
+            quizState.lastType = 0;
+            
+            document.getElementById('display-name').innerText = quizState.name;
+            document.getElementById('display-score').innerText = quizState.score;
+            
+            uiQuizSetup.classList.add('hidden');
+            uiQuizActive.classList.remove('hidden');
+            
+            // Sync initial state (0 points)
+            updateScoreInCloud(quizState.name, quizState.score);
+
+            generateQuestion();
+        }
+
+        function generateQuestion() {
+            quizState.isAwaitingNext = false;
+            quizState.questionCount++;
+            
+            let qCountEl = document.getElementById('display-q-count');
+            if (qCountEl) qCountEl.innerText = quizState.questionCount;
+
+            document.getElementById('quiz-answer-input').value = '';
+            document.getElementById('quiz-answer-input').disabled = false;
+            
+            const btn = document.getElementById('btn-submit-answer');
+            btn.disabled = false;
+            btn.innerText = 'Submit';
+            btn.classList.remove('bg-indigo-500', 'hover:bg-indigo-600');
+            btn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+
+            document.getElementById('quiz-feedback').style.opacity = '0';
+
+            // Ensure the next question uses a different theorem than the last one
+            let type;
+            do {
+                type = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+            } while (type === quizState.lastType);
+            quizState.lastType = type;
+
+            let q = { type };
+
+            if (type === 1) {
+                q.theta = Math.floor(Math.random() * 45) + 20; // 20 to 65
+                q.answer = 90 - q.theta;
+                q.hint = "Radius & Tangent";
+                q.text = `Given a tangent to a circle and a radius drawn to the point of contact P, a right-angled triangle OPT is formed. If angle POT is <b>${q.theta}°</b>, find the angle PTO (marked with <b>?</b>).`;
+            } else if (type === 2) {
+                const angles = ['APO', 'BPO', 'AOP', 'BOP'];
+                const givenIdx = Math.floor(Math.random() * 4);
+                let targetIdx;
+                
+                // Pick a target angle that is different from the given angle
+                do {
+                    targetIdx = Math.floor(Math.random() * 4);
+                } while (targetIdx === givenIdx);
+
+                q.givenName = angles[givenIdx];
+                q.targetName = angles[targetIdx];
+                
+                // Generate a random angle between 20 and 69 degrees
+                let X = Math.floor(Math.random() * 50) + 20;
+                q.givenValue = X;
+
+                // Determine if angles belong to the 'P' vertex or the 'O' vertex
+                let givenIsP = (q.givenName === 'APO' || q.givenName === 'BPO');
+                let targetIsP = (q.targetName === 'APO' || q.targetName === 'BPO');
+
+                // Apply geometry rules: angles at same vertex are equal, angles at different vertices sum to 90
+                if (givenIsP) {
+                    q.thetaP = X;
+                    q.thetaO = 90 - X;
+                    q.answer = targetIsP ? X : 90 - X;
+                } else {
+                    q.thetaO = X;
+                    q.thetaP = 90 - X;
+                    q.answer = targetIsP ? 90 - X : X;
+                }
+
+                q.hint = "Tangent Properties";
+                q.text = `Tangents PA and PB are drawn from external point P to a circle with center O. If ∠${q.givenName} is <b>${X}°</b>, find ∠${q.targetName} (marked with <b>?</b>).`;
+            } else {
+                q.theta = Math.floor(Math.random() * 55) + 25; // 25 to 80
+                q.answer = q.theta;
+                q.hint = "Alternate Segment";
+                q.text = `The angle between the tangent at P and chord PA is <b>${q.theta}°</b>. Find the angle in the alternate segment, ∠PBA (marked with <b>?</b>).`;
+            }
+
+            quizState.currentQ = q;
+            
+            document.getElementById('quiz-theorem-hint').innerText = q.hint;
+            document.getElementById('quiz-question-text').innerHTML = q.text;
+            
+            // Focus input automatically
+            setTimeout(() => document.getElementById('quiz-answer-input').focus(), 100);
+
+            draw(); // Redraw canvas with new question
+        }
+
+        function checkAnswer() {
+            if (quizState.isAwaitingNext) {
+                // If awaiting the next question, clicking the button manually advances
+                generateQuestion();
+                return;
+            }
+
+            const inputVal = document.getElementById('quiz-answer-input').value;
+            if (inputVal === '') return;
+
+            const userAnswer = parseInt(inputVal, 10);
+            const isCorrect = userAnswer === quizState.currentQ.answer;
+            const feedbackEl = document.getElementById('quiz-feedback');
+            const btn = document.getElementById('btn-submit-answer');
+
+            if (isCorrect) {
+                quizState.score++;
+                document.getElementById('display-score').innerText = quizState.score;
+                
+                // Sync updated score to cloud
+                updateScoreInCloud(quizState.name, quizState.score);
+
+                feedbackEl.innerHTML = `<span class="text-emerald-600 bg-emerald-100 px-4 py-2 rounded-lg w-full text-center">Correct! Well done.</span>`;
+                
+                feedbackEl.style.opacity = '1';
+                quizState.isAwaitingNext = true;
+                
+                document.getElementById('quiz-answer-input').disabled = true;
+                btn.disabled = true;
+                btn.innerText = 'Next in 3s...';
+
+                // Auto-advance only on correct answers
+                setTimeout(() => {
+                    if(quizState.isAwaitingNext) generateQuestion();
+                }, 3000);
+            } else {
+                // Show the solution and wait for user to click next
+                let explanation = "";
+                if (quizState.currentQ.type === 1) explanation = ` (90° - ${quizState.currentQ.theta}°)`;
+                else if (quizState.currentQ.type === 3) explanation = ` (Alternate Segment)`;
+                
+                feedbackEl.innerHTML = `<span class="text-red-600 bg-red-100 px-4 py-2 rounded-lg w-full text-center">Incorrect. Answer is ${quizState.currentQ.answer}°${explanation}</span>`;
+                feedbackEl.style.opacity = '1';
+                
+                quizState.isAwaitingNext = true;
+                
+                document.getElementById('quiz-answer-input').disabled = true;
+                
+                // Allow manual click for next question
+                btn.disabled = false;
+                btn.innerText = 'Next Question';
+                btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+                btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+            }
+        }
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (evt.touches && evt.touches.length > 0) {
+                clientX = evt.touches[0].clientX; clientY = evt.touches[0].clientY;
+            } else {
+                clientX = evt.clientX; clientY = evt.clientY;
+            }
+            return {
+                x: (clientX - rect.left) * (canvas.width / rect.width / dpr),
+                y: (clientY - rect.top) * (canvas.height / rect.height / dpr)
+            };
+        }
+
+        function checkClick(pos) {
+            if (appMode !== 'explore') return null; // Disable dragging in Quiz mode
+            
+            const hitRadius = 25;
+            if (currentTheorem === 1) {
+                let P = getPointOnCircle(points.thm1.pAngle);
+                if (dist(pos, P) < hitRadius) return { type: 'thm1_p' };
+            } 
+            else if (currentTheorem === 2) {
+                let A = getPointOnCircle(points.thm2.aAngle);
+                let B = getPointOnCircle(points.thm2.bAngle);
+                if (dist(pos, A) < hitRadius) return { type: 'thm2_a' };
+                if (dist(pos, B) < hitRadius) return { type: 'thm2_b' };
+            }
+            else if (currentTheorem === 3) {
+                let P = getPointOnCircle(points.thm3.pAngle);
+                let A = getPointOnCircle(points.thm3.aAngle);
+                let B = getPointOnCircle(points.thm3.bAngle);
+                if (dist(pos, P) < hitRadius) return { type: 'thm3_p' };
+                if (dist(pos, A) < hitRadius) return { type: 'thm3_a' };
+                if (dist(pos, B) < hitRadius) return { type: 'thm3_b' };
+            }
+            return null;
+        }
+
+        function onDown(e) {
+            if (appMode !== 'explore') return;
+            const pos = getMousePos(e);
+            draggingPoint = checkClick(pos);
+            if (draggingPoint) {
+                e.preventDefault();
+                canvas.style.cursor = 'grabbing';
+            }
+        }
+
+        function onMove(e) {
+            if (appMode !== 'explore') return;
+            if (!draggingPoint) {
+                const pos = getMousePos(e);
+                if(checkClick(pos)) canvas.style.cursor = 'grab';
+                else canvas.style.cursor = 'default';
+                return;
+            }
+
+            e.preventDefault();
+            const pos = getMousePos(e);
+            let newAngle = Math.atan2(pos.y - center.y, pos.x - center.x);
+
+            if (draggingPoint.type === 'thm1_p') points.thm1.pAngle = newAngle;
+            else if (draggingPoint.type === 'thm2_a') {
+                let diff = Math.abs(normalizeAngle(points.thm2.bAngle) - normalizeAngle(newAngle));
+                if (diff > 0.1 && diff < Math.PI * 1.9 && Math.abs(diff - Math.PI) > 0.05) points.thm2.aAngle = newAngle;
+            }
+            else if (draggingPoint.type === 'thm2_b') {
+                let diff = Math.abs(normalizeAngle(newAngle) - normalizeAngle(points.thm2.aAngle));
+                if (diff > 0.1 && diff < Math.PI * 1.9 && Math.abs(diff - Math.PI) > 0.05) points.thm2.bAngle = newAngle;
+            }
+            else if (draggingPoint.type === 'thm3_p') points.thm3.pAngle = newAngle;
+            else if (draggingPoint.type === 'thm3_a') points.thm3.aAngle = newAngle;
+            else if (draggingPoint.type === 'thm3_b') points.thm3.bAngle = newAngle;
+            
+            draw();
+        }
+
+        function onUp() {
+            draggingPoint = null;
+            if (appMode === 'explore') canvas.style.cursor = 'default';
+        }
+
+        function resize() {
+            width = container.clientWidth;
+            height = container.clientHeight;
+            dpr = window.devicePixelRatio || 1;
+            
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            center.x = width / 2;
+            center.y = height / 2;
+            radius = Math.min(width, height) * 0.28;
+            if (radius > 160) radius = 160; 
+
+            draw();
+        }
+
+        function draw() {
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            if (appMode === 'explore') {
+                if (currentTheorem === 1) renderTheorem1();
+                else if (currentTheorem === 2) renderTheorem2();
+                else if (currentTheorem === 3) renderTheorem3();
+            } else if (appMode === 'quiz' && quizState.currentQ) {
+                // Clear state, render specific static quiz setups
+                if (quizState.currentQ.type === 1) renderQuizTheorem1();
+                else if (quizState.currentQ.type === 2) renderQuizTheorem2();
+                else if (quizState.currentQ.type === 3) renderQuizTheorem3();
+            } else {
+                // Quiz Setup mode - just show an empty circle
+                drawCircle();
+            }
+        }
+
+        window.setTheorem = function(id) {
+            currentTheorem = id;
+            document.querySelectorAll('.theorem-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-thm' + id).classList.add('active');
+            document.getElementById('description-box').innerHTML = theoremData[id].desc;
+            draw();
+        }
+
+        // Initialize App
+        window.addEventListener('resize', resize);
+        canvas.addEventListener('mousedown', onDown);
+        canvas.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        canvas.addEventListener('touchstart', onDown, {passive: false});
+        canvas.addEventListener('touchmove', onMove, {passive: false});
+        window.addEventListener('touchend', onUp);
+
+        // First paint
+        setTheorem(1);
+        resize();
+    </script>
+</body>
+</html>
