@@ -827,33 +827,37 @@
             if (inputVal === '') return;
 
             const userAnswer = parseInt(inputVal, 10);
-            const isCorrect = userAnswer === quizState.currentQ.answer;
+            const correctAnswer = quizState.currentQ.answer;
+            const isCorrect = userAnswer === correctAnswer;
             const feedbackEl = document.getElementById('quiz-feedback');
             const btn = document.getElementById('btn-submit-answer');
+
+            // Disable input and mark status immediately to prevent double submissions or quick clicks
+            document.getElementById('quiz-answer-input').disabled = true;
+            quizState.isAwaitingNext = true;
 
             if (isCorrect) {
                 quizState.score++;
                 document.getElementById('display-score').innerText = quizState.score;
                 
-                // Sync updated score and register the attempt to cloud
-                updateScoreInCloud(quizState.name, quizState.score, true);
-
                 feedbackEl.innerHTML = `<span class="text-emerald-600 bg-emerald-100 px-4 py-2 rounded-lg w-full text-center">Correct! Well done.</span>`;
-                
                 feedbackEl.style.opacity = '1';
-                quizState.isAwaitingNext = true;
                 
-                document.getElementById('quiz-answer-input').disabled = true;
-
-                // Sync attempt to cloud even if incorrect (score stays the same)
+                // Sync updated score and register EXACTLY ONE correct attempt to the cloud
                 updateScoreInCloud(quizState.name, quizState.score, true);
-                
-                // Allow manual click for next question
-                btn.disabled = false;
-                btn.innerText = 'Next Question';
-                btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
-                btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+            } else {
+                feedbackEl.innerHTML = `<span class="text-rose-600 bg-rose-100 px-4 py-2 rounded-lg w-full text-center">Incorrect! Correct answer was ${correctAnswer}°.</span>`;
+                feedbackEl.style.opacity = '1';
+
+                // Sync unchanged score but register EXACTLY ONE incorrect attempt to the cloud
+                updateScoreInCloud(quizState.name, quizState.score, true);
             }
+
+            // Change the submit button to "Next Question" to allow manual progression
+            btn.disabled = false;
+            btn.innerText = 'Next Question';
+            btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+            btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
         }
 
         function getMousePos(evt) {
