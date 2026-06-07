@@ -734,7 +734,7 @@
         }
 
         function generateQuestion() {
-            if (quizState.autoAdvanceTimer) clearTimeout(quizState.autoAdvanceTimer);
+            if (quizState.autoAdvanceTimer) clearInterval(quizState.autoAdvanceTimer);
             quizState.isAwaitingNext = false;
             quizState.questionCount++;
             
@@ -848,25 +848,39 @@
                 // Sync updated score and register EXACTLY ONE correct attempt to the cloud
                 updateScoreInCloud(quizState.name, quizState.score, true);
 
-                // Automatically advance after 3 seconds
-                quizState.autoAdvanceTimer = setTimeout(() => {
-                    if (quizState.isAwaitingNext) {
-                        generateQuestion();
+                // Change button style for progression
+                btn.disabled = false;
+                btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+                btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+
+                // Start auto-advance countdown
+                let countdown = 3;
+                btn.innerText = `Next question in ${countdown}s`;
+                
+                quizState.autoAdvanceTimer = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        if (quizState.isAwaitingNext) btn.innerText = `Next question in ${countdown}s`;
+                    } else {
+                        clearInterval(quizState.autoAdvanceTimer);
+                        if (quizState.isAwaitingNext) {
+                            generateQuestion();
+                        }
                     }
-                }, 3000);
+                }, 1000);
             } else {
                 feedbackEl.innerHTML = `<span class="text-rose-600 bg-rose-100 px-4 py-2 rounded-lg w-full text-center">Incorrect! Correct answer was ${correctAnswer}°.</span>`;
                 feedbackEl.style.opacity = '1';
 
                 // Sync unchanged score but register EXACTLY ONE incorrect attempt to the cloud
                 updateScoreInCloud(quizState.name, quizState.score, true);
-            }
 
-            // Change the submit button to "Next Question" to allow manual progression
-            btn.disabled = false;
-            btn.innerText = 'Next Question';
-            btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
-            btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+                // Change the submit button to "Next Question" to allow manual progression
+                btn.disabled = false;
+                btn.innerText = 'Next Question';
+                btn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+                btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+            }
         }
 
         function getMousePos(evt) {
